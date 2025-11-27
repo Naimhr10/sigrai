@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>IA Médica Asistente</title>
+  <style>
+    /* Diseño profesional con tonos rojos difuminados */
+    :root{
+      --bg1: #1c1c1c;
+      --accent1: #a30000;
+      --accent2: #ff3333;
+      --glass: rgba(255,255,255,0.06);
+      --muted: rgba(255,255,255,0.6);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-family: "Poppins", "Inter", sans-serif;
+      background: linear-gradient(135deg,#0b0b0b 0%, #2b0b0b 50%, #3b0000 100%);
+      color:#fff;
+    }
+
+    .chat-container{
+      width: 460px;
+      max-width: 96%;
+      height: 680px;
+      border-radius: 18px;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.35));
+      box-shadow: 0 18px 60px rgba(0,0,0,0.6), 0 6px 20px rgba(163,0,0,0.08);
+      display:flex;
+      flex-direction:column;
+      border: 1px solid rgba(255,255,255,0.04);
+      backdrop-filter: blur(8px);
+    }
+
+    .header{
+      padding: 18px 20px;
+      background: linear-gradient(90deg,var(--accent1),var(--accent2));
+      color:#fff;
+      font-weight:700;
+      font-size:18px;
+      letter-spacing:0.6px;
+      text-align:center;
+      box-shadow: inset 0 -6px 30px rgba(0,0,0,0.15);
+    }
+
+    .messages{
+      flex:1;
+      padding: 18px;
+      overflow-y:auto;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      background-image: radial-gradient(circle at 10% 10%, rgba(163,0,0,0.02), transparent 10%),
+                        radial-gradient(circle at 90% 90%, rgba(255,51,51,0.02), transparent 10%);
+    }
+
+    .msg{
+      max-width:78%;
+      padding:12px 14px;
+      border-radius:12px;
+      line-height:1.4;
+      font-size:15px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .msg.bot{
+      align-self:flex-start;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.04));
+      border: 1px solid rgba(255,255,255,0.03);
+      color:#f3f4f6;
+    }
+
+    .msg.user{
+      align-self:flex-end;
+      background: linear-gradient(135deg,#ff5a5a,#c10000);
+      color:white;
+      border-bottom-right-radius:6px;
+      box-shadow: 0 8px 24px rgba(193,0,0,0.25);
+    }
+
+    .input-area{
+      display:flex;
+      gap:8px;
+      padding: 14px;
+      align-items:center;
+      border-top: 1px solid rgba(255,255,255,0.03);
+      background: linear-gradient(180deg, rgba(0,0,0,0.25), rgba(255,255,255,0.01));
+    }
+
+    .file-label{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 12px;
+      border-radius:10px;
+      background:var(--glass);
+      color:var(--muted);
+      cursor:pointer;
+      font-size:14px;
+      border:1px solid rgba(255,255,255,0.02);
+    }
+
+    input[type="file"]{ display:none; }
+
+    .text-input{
+      flex:1;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,0.04);
+      background: rgba(255,255,255,0.02);
+      color: #fff;
+      outline:none;
+      font-size:14px;
+    }
+
+    .btn-send{
+      padding:10px 14px;
+      border-radius:10px;
+      border:none;
+      background: linear-gradient(90deg,var(--accent2),var(--accent1));
+      color:#fff;
+      font-weight:700;
+      cursor:pointer;
+      box-shadow: 0 10px 22px rgba(163,0,0,0.12);
+    }
+
+    .btn-send[disabled]{
+      opacity:0.5;
+      cursor:default;
+      transform:none;
+      box-shadow:none;
+    }
+
+    .small-note{
+      font-size:12px;
+      color:var(--muted);
+      padding:8px 18px;
+    }
+
+    /* scrollbar */
+    .messages::-webkit-scrollbar{ width:8px; }
+    .messages::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.06); border-radius:6px; }
+
+    @media(max-width:520px){
+      .chat-container{ width: 96%; height: 86vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="header">Asistente IA Médica</div>
+
+    <div class="messages" id="messages">
+      <!-- saludo inicial (se inyecta con JS al cargar) -->
+    </div>
+
+    <div class="small-note" id="note">Consejo: esto es una herramienta experimental — no reemplaza a un profesional de la salud.</div>
+
+    <div class="input-area">
+      <label class="file-label" for="file">📁 Subir imagen</label>
+      <input type="file" id="file" accept="image/*" />
+
+      <input type="text" id="inputText" class="text-input" placeholder="Escribe tu pregunta o comentario..." />
+
+      <button id="sendBtn" class="btn-send">Enviar</button>
+    </div>
+  </div>
+
+  <script>
+    // Elementos
+    const messagesEl = document.getElementById('messages');
+    const inputText = document.getElementById('inputText');
+    const sendBtn = document.getElementById('sendBtn');
+    const fileInput = document.getElementById('file');
+
+    // Función para agregar mensajes al chat
+    function addMessage(text, who='bot') {
+      const d = document.createElement('div');
+      d.className = 'msg ' + (who === 'user' ? 'user' : 'bot');
+      d.textContent = text;
+      messagesEl.appendChild(d);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    // Saludo inicial (al cargar)
+    window.addEventListener('load', () => {
+      const greeting = "Hola — soy tu asistente médico IA. Puedo ayudarte a interpretar imágenes médicas y responder preguntas generales. Si vas a subir una radiografía o tomografía, usa el botón \"Subir imagen\" y esperaré al análisis.";
+      addMessage(greeting, 'bot');
+    });
+
+    // Manejo de envío de texto
+    async function sendText() {
+      const text = inputText.value.trim();
+      if (!text) return;
+      addMessage(text, 'user');
+      inputText.value = '';
+      // Deshabilitar botón mientras responde
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Enviando...';
+
+      try {
+        const form = new FormData();
+        form.append('mensaje', text);
+
+        const res = await fetch('http://127.0.0.1:5000/chat', {
+          method: 'POST',
+          body: form
+        });
+        const data = await res.json();
+        const respuesta = data.respuesta || 'No se obtuvo respuesta.';
+        addMessage(respuesta, 'bot');
+      } catch (err) {
+        addMessage('⚠️ Error: no se pudo conectar con el servidor.', 'bot');
+        console.error(err);
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Enviar';
+      }
+    }
+
+    // Manejo de subida/analisis de imagen
+    async function sendImage(file) {
+      if (!file) return;
+      addMessage('Imagen enviada para análisis...', 'user');
+
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Analizando...';
+
+      try {
+        const form = new FormData();
+        form.append('imagen', file);
+
+        const res = await fetch('http://127.0.0.1:5000/analizar', {
+          method: 'POST',
+          body: form
+        });
+        const data = await res.json();
+        const resultado = data.resultado || data.respuesta || 'No se obtuvo resultado del análisis.';
+        addMessage(resultado, 'bot');
+      } catch (err) {
+        addMessage('⚠️ Error al analizar la imagen.', 'bot');
+        console.error(err);
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Enviar';
+        fileInput.value = '';
+      }
+    }
+
+    // Eventos
+    sendBtn.addEventListener('click', () => {
+      // si hay archivo seleccionado, prioriza imagen; si no, texto
+      if (fileInput.files && fileInput.files.length) {
+        sendImage(fileInput.files[0]);
+      } else {
+        sendText();
+      }
+    });
+
+    inputText.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendText();
+    });
+
+    // click en label abre el file input
+    document.querySelector('.file-label').addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length) {
+        // opcional: auto-enviar al elegir imagen (si prefieres, descomenta)
+        // sendImage(e.target.files[0]);
+      }
+    });
+  </script>
+</body>
+</html>
