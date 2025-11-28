@@ -1,7 +1,0 @@
-flask
-flask-cors
-requests
-gunicorn
-opencv-python-headless
-numpy
-Pillow
